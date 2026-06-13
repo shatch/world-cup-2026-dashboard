@@ -19,7 +19,7 @@ All 104 matches, June 11 – July 19, 2026, hosted across the USA, Canada, and M
 - **Dynamic bracket** — knockout matchups fill in real team names as FIFA sets them (showing seeding placeholders like `1C vs 2F` until then).
 - **Timezone selector** — view kickoff times in Eastern (default), your local zone, or other presets; the calendar export stays absolute.
 - **Calendar export (`.ics`)** — download upcoming matches that match your current filters, in two modes.
-- **Social share** — one-tap X / Facebook / WhatsApp / copy-link buttons with viral, filter-aware pre-filled copy (sharing while filtered to a team yields "Every USA match…").
+- **Social share** — one-tap X / Facebook / LinkedIn / WhatsApp / copy-link buttons with viral, filter-aware pre-filled copy (sharing while filtered to a team yields "Every USA match…").
 - **Responsive** down to mobile, with a quiet dark aesthetic.
 
 ## Quick start
