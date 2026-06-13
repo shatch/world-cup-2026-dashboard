@@ -34,7 +34,7 @@ python3 -m http.server
 # then visit http://localhost:8000
 ```
 
-The only external dependency is Google Fonts (loaded via `<link>`); everything else — markup, styles, data, and logic — is inline in `index.html`.
+Markup, styles, data, and logic are all inline in `index.html`; the only local asset is `hero.jpg` (the header background, referenced relatively), and the only network dependencies are Google Fonts and the live-score feed. The favicon is an inline SVG soccer emoji (no file).
 
 ## Calendar export
 
@@ -89,10 +89,11 @@ This repo's `index.html` is the **source of truth**. Deployment is a copy step �
 # then push the blog repo → Amplify rebuilds the site
 ```
 
-The blog's static dir defaults to `../hatch-org/blog/static/world-cup/`; override
-with the `WORLD_CUP_DEST` env var if your layout differs. The copy at
-`hatch-org/blog/static/world-cup/index.html` is **generated — never edit it
-directly**; change it here and re-run `deploy.sh`.
+`deploy.sh` syncs both `index.html` and `hero.jpg`. The blog's static dir
+defaults to `../hatch-org/blog/static/world-cup/`; override with the
+`WORLD_CUP_DEST` env var if your layout differs. The copies under
+`hatch-org/blog/static/world-cup/` are **generated — never edit them
+directly**; change them here and re-run `deploy.sh`.
 
 ## Possible next steps
 

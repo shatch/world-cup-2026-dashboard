@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-A single self-contained `index.html` — a static, zero-dependency dashboard listing all 104 FIFA World Cup 2026 matches (June 11 – July 19, 2026) with kickoff times (Eastern), English/Spanish TV channels, streaming options, filtering, and `.ics` calendar export. No build step, no package manager, no tests, no backend.
+A static, zero-dependency dashboard listing all 104 FIFA World Cup 2026 matches (June 11 – July 19, 2026) with kickoff times (timezone-selectable, ET default), English/Spanish TV channels, streaming options, filtering, live scores, and `.ics` calendar export. No build step, no package manager, no tests, no backend. Effectively one file — `index.html` holds all markup/styles/data/logic — plus a single image asset, `hero.jpg` (header background, referenced relatively); the favicon is an inline SVG emoji. `deploy.sh` syncs both files to the blog.
 
 See `HANDOFF.md` for the full build rationale, data provenance, and a detailed caveats list — read it before making non-trivial changes.
 

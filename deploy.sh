@@ -17,11 +17,16 @@ mkdir -p "$DEST_DIR"
 cp "$SRC" "$DEST"
 echo "✓ Copied index.html → $DEST"
 
+# Sync static assets (hero image, etc.) that index.html references relatively.
+for asset in hero.jpg; do
+  [ -f "$SCRIPT_DIR/$asset" ] && cp "$SCRIPT_DIR/$asset" "$DEST_DIR/$asset" && echo "✓ Copied $asset → $DEST_DIR/$asset"
+done
+
 SRC_REV="$(git -C "$SCRIPT_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 
 if [ "${1:-}" = "--commit" ]; then
   BLOG_ROOT="$(git -C "$DEST_DIR" rev-parse --show-toplevel)"
-  git -C "$BLOG_ROOT" add "$DEST"
+  git -C "$BLOG_ROOT" add "$DEST_DIR"
   git -C "$BLOG_ROOT" commit -m "Update world-cup dashboard (src @ $SRC_REV)"
   echo "✓ Committed in $BLOG_ROOT — push to trigger Amplify deploy."
 else
