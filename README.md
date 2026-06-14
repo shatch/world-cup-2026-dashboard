@@ -102,4 +102,4 @@ changes are easy to make and review — open it in a browser and you're developi
 
 ---
 
-See [`HANDOFF.md`](./HANDOFF.md) for the full build rationale and [`CLAUDE.md`](./CLAUDE.md) for guidance when working in this repo with Claude Code.
+See [`CLAUDE.md`](./CLAUDE.md) for guidance when working in this repo with Claude Code.

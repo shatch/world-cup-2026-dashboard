@@ -4,8 +4,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A static, zero-dependency dashboard listing all 104 FIFA World Cup 2026 matches (June 11 – July 19, 2026) with kickoff times (timezone-selectable, ET default), English/Spanish TV channels, streaming options, filtering, live scores, and `.ics` calendar export. No build step, no package manager, no tests, no backend. Effectively one file — `index.html` holds all markup/styles/data/logic — plus a single image asset, `hero.jpg` (header background, referenced relatively); the favicon is an inline SVG emoji.
 
-See `HANDOFF.md` for the full build rationale, data provenance, and a detailed caveats list — read it before making non-trivial changes.
-
 ### Data provenance (source-of-truth hierarchy)
 
 Match data is hardcoded, not fetched: there's no stable per-match World Cup API with US broadcast assignments. When updating data, preserve this hierarchy — English channel (FOX/FS1), kickoff times, and venues come from **FOX's published schedule** (the rights holder); the Spanish-language Telemundo/Universo split and the third-place match time come from a **secondary source** (FOX doesn't publish the Spanish split). Where sources disagree on English times/channels, **FOX wins**.
