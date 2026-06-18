@@ -18,6 +18,7 @@ All 104 matches, June 11 – July 19, 2026, hosted across the USA, Canada, and M
 - **Live scores & status** — hydrates real scores, live clock, and Live/FT/Upcoming state from a free public feed (client-side, no backend), with a graceful fallback to the static schedule when offline.
 - **Dynamic bracket** — knockout matchups fill in real team names as FIFA sets them (showing seeding placeholders like `1C vs 2F` until then).
 - **Timezone selector** — view kickoff times in Eastern (default), your local zone, or other presets; the calendar export stays absolute.
+- **Zameer Persistence** — auto-detects your timezone on first visit and remembers your timezone and Watch Party preferences across sessions (storage-safe: silently no-ops in sandboxed previews where storage is blocked).
 - **Calendar export (`.ics`)** — download upcoming matches that match your current filters, in two modes.
 - **Social share** — one-tap X / Facebook / LinkedIn / WhatsApp / copy-link buttons with viral, filter-aware pre-filled copy (sharing while filtered to a team yields "Every USA match…").
 - **Responsive** down to mobile, with a quiet dark aesthetic.
@@ -73,7 +74,7 @@ To update the schedule or scores, edit the objects in the `M` array. Adding a te
 - **Unofficial live feed** — live scores/status and knockout teams come from ESPN's *unofficial* `fifa.world` endpoint, which can change or break without notice. The app degrades gracefully to the static `M` data; the freshness indicator in the header shows whether live data is connected.
 - **Default ET, EDT under the hood** — labels read "ET" and mean EDT. The timezone selector reformats other zones from each match's absolute instant, but **day-grouping stays by tournament matchday** (a late ET game keeps its matchday even if it shows a next-day local time).
 - **Spanish channel split** is from a secondary source — re-verify the 12-game Universo set if the network revises it.
-- **No persistent storage** — `localStorage` is intentionally avoided (blocked in sandboxed previews); all state, including the timezone choice, is in memory.
+- **Preference-only persistence (Zameer Persistence)** — only two display preferences persist (timezone and the Watch Party toggle), saved to `localStorage` via a `try/catch`-guarded wrapper that silently no-ops when storage is blocked (e.g. sandboxed previews). All other state — search, filters, Today/Upcoming — stays in memory by design.
 
 ## Deploying
 
