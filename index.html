@@ -432,9 +432,9 @@ const M = [
  {d:"2026-06-18",t:"9:00 PM",sk:21,h:"Mexico",a:"South Korea",grp:"Group A",v:"Guadalajara Stadium",tv:"FOX"},
  // June 19
  {d:"2026-06-19",t:"3:00 PM",sk:15,h:"USA",a:"Australia",grp:"Group D",v:"Seattle Stadium",tv:"FOX"},
- {d:"2026-06-19",t:"3:00 PM",sk:15.1,h:"Scotland",a:"Morocco",grp:"Group C",v:"Boston Stadium",tv:"FOX"},
- {d:"2026-06-19",t:"9:00 PM",sk:21,h:"Brazil",a:"Haiti",grp:"Group C",v:"Philadelphia Stadium",tv:"FOX"},
- {d:"2026-06-19",t:"12:00 AM",sk:24,h:"Türkiye",a:"Paraguay",grp:"Group D",v:"San Francisco Bay Stadium",tv:"FS1"},
+ {d:"2026-06-19",t:"6:00 PM",sk:18,h:"Scotland",a:"Morocco",grp:"Group C",v:"Boston Stadium",tv:"FOX"},
+ {d:"2026-06-19",t:"8:30 PM",sk:20.5,h:"Brazil",a:"Haiti",grp:"Group C",v:"Philadelphia Stadium",tv:"FOX"},
+ {d:"2026-06-19",t:"11:00 PM",sk:23,h:"Türkiye",a:"Paraguay",grp:"Group D",v:"San Francisco Bay Stadium",tv:"FS1"},
  // June 20
  {d:"2026-06-20",t:"1:00 PM",sk:13,h:"Netherlands",a:"Sweden",grp:"Group F",v:"Houston Stadium",tv:"FOX"},
  {d:"2026-06-20",t:"4:00 PM",sk:16,h:"Germany",a:"Ivory Coast",grp:"Group E",v:"Toronto Stadium",tv:"FOX"},
@@ -627,9 +627,11 @@ function detectTz(){
     return map[z] || 'Auto';
   }catch(e){ return 'Eastern'; }
 }
+function etLabel(dt){ return new Intl.DateTimeFormat('en-US',{timeZone:'America/New_York',hour:'numeric',minute:'2-digit'}).format(dt); }
 function fmtTime(m){
   if(m.t==="FT"||m.t==="TBD") return {time:m.t,zone:""};
-  if(!state.tz || state.tz==="Eastern") return {time:m.t,zone:"ET"};
+  // Eastern: prefer ESPN's authoritative instant (self-corrects stale static times), else the static label
+  if(!state.tz || state.tz==="Eastern") return {time: m._ko?etLabel(new Date(m._ko)):m.t, zone:"ET"};
   try{
     const dt=startUTC(m);                         // absolute instant (UTC)
     const tz=state.tz==="Auto"?undefined:TZ_ZONES[state.tz];
@@ -778,6 +780,7 @@ document.getElementById('clear').addEventListener('click',()=>{
 function pad(n){return String(n).padStart(2,'0');}
 function icsStamp(dt){return dt.getUTCFullYear()+pad(dt.getUTCMonth()+1)+pad(dt.getUTCDate())+'T'+pad(dt.getUTCHours())+pad(dt.getUTCMinutes())+'00Z';}
 function startUTC(m){
+  if(m._ko) return new Date(m._ko);              // authoritative kickoff instant from ESPN, when available
   const [Y,Mo,D]=m.d.split('-').map(Number);
   let h=15,min=0,off=0;
   const tm=m.t.match(/(\d+):(\d+)\s*(AM|PM)/i);
@@ -878,7 +881,18 @@ shC.addEventListener('click',async()=>{
 // live status/scores and resolved knockout teams. Any failure falls back
 // silently to the static schedule. No backend, no webhooks — just polling.
 const ESPN_BASE='https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard';
-const ESPN_NAME={"United States":"USA","Bosnia-Herzegovina":"Bosnia and Herzegovina","Congo DR":"DR Congo"};
+const ESPN_NAME={"United States":"USA","Bosnia-Herzegovina":"Bosnia and Herzegovina","Congo DR":"DR Congo","Turkey":"Türkiye"};
+// ESPN real stadium name -> M generic venue (used to match knockouts, whose teams are still placeholders)
+const ESPN_VENUE={
+ "SoFi Stadium":"Los Angeles Stadium","NRG Stadium":"Houston Stadium","Gillette Stadium":"Boston Stadium",
+ "Estadio BBVA":"Monterrey Stadium","AT&T Stadium":"Dallas Stadium","MetLife Stadium":"New York New Jersey Stadium",
+ "Estadio Banorte":"Mexico City Stadium","Mercedes-Benz Stadium":"Atlanta Stadium","Lumen Field":"Seattle Stadium",
+ "Levi's Stadium":"San Francisco Bay Stadium","BMO Field":"Toronto Stadium","BC Place":"BC Place Vancouver",
+ "Hard Rock Stadium":"Miami Stadium","GEHA Field at Arrowhead Stadium":"Kansas City Stadium",
+ "Lincoln Financial Field":"Philadelphia Stadium","Estadio Akron":"Guadalajara Stadium"
+};
+const etDateStr=ms=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(ms));
+const plusDay=d=>{const x=new Date(d+'T12:00:00');x.setDate(x.getDate()+1);return x.toISOString().slice(0,10);};
 const KNOWN=new Set(Object.keys(FLAGS));
 const ymd=d=>d.replace(/-/g,'');
 function normName(n){ n=(n||"").trim(); return ESPN_NAME[n]||n; }
@@ -898,22 +912,29 @@ async function fetchEvents(dates){
     const away=cs.find(x=>x.homeAway==='away')||cs[1]||{};
     const t=(e.status||{}).type||{};
     return {when:new Date(e.date).getTime(), state:t.state, detail:t.shortDetail||t.detail||'',
+      venue:((c.venue||{}).fullName)||'',
       hName:(home.team||{}).displayName, hScore:home.score,
       aName:(away.team||{}).displayName, aScore:away.score};
   });
 }
+// Match an ESPN event to an M entry by identity (not by clock), so a moved kickoff still matches
+// and its time self-corrects: group games by team pair; knockouts by venue + matchday.
+function matchFor(ev){
+  const eh=normName(ev.hName), ea=normName(ev.aName);
+  if(eh&&ea&&!isPlaceholder(ev.hName)&&!isPlaceholder(ev.aName)){
+    const m=M.find(x=> x.h && [x.h,x.a].includes(eh) && [x.h,x.a].includes(ea));
+    if(m) return m;                               // group stage (unique pair)
+  }
+  const mv=ESPN_VENUE[ev.venue]||ev.venue;        // resolved or placeholder knockout
+  const ed=etDateStr(ev.when);
+  return M.find(x=> !x.h && x.v===mv && (x.d===ed || plusDay(x.d)===ed)) || null;
+}
 function applyEvents(evs){
   evs.forEach(ev=>{
     const eh=normName(ev.hName), ea=normName(ev.aName);
-    let best=null,bestDiff=Infinity;
-    M.forEach(m=>{
-      const diff=Math.abs(startUTC(m).getTime()-ev.when);
-      if(diff>90*60*1000) return;                 // ±90 min instant window
-      if(m.h){ const pair=[m.h,m.a]; if(!(pair.includes(eh)&&pair.includes(ea))) return; }
-      if(diff<bestDiff){bestDiff=diff;best=m;}
-    });
-    if(!best) return;
-    const m=best;
+    const m=matchFor(ev);
+    if(!m) { [eh,ea].forEach(n=>{ if(n&&!isPlaceholder(n)&&!KNOWN.has(n)) console.warn('Unmapped ESPN team name:',n); }); return; }
+    m._ko = ev.when;                              // authoritative kickoff instant -> drives displayed time + startUTC
     if(ev.state) m._st = ev.state==='in'?'live':ev.state==='post'?'ft':'up';
     m._detail = ev.state==='in'?ev.detail:'';
     const hasScore = ev.hScore!=null && ev.aScore!=null && ev.state!=='pre';
