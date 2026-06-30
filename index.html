@@ -210,6 +210,10 @@ if (location.hostname.endsWith('hatch.org')) {
   .match:hover{border-color:var(--line-strong)}
   .match.final{opacity:.62}
   .match.live{border-color:rgba(240,82,75,.55);background:linear-gradient(90deg, rgba(240,82,75,.07), var(--panel) 40%)}
+  /* completed matches: de-emphasize no-longer-actionable kickoff time + TV info, keep the result bright */
+  .match.ft .when .time{color:var(--muted-2)}
+  .match.ft .chiprow{opacity:.5}
+  .match.ft .stream{opacity:.5}
 
   .when{display:flex;flex-direction:column;gap:3px;border-right:1px solid var(--line);padding-right:8px}
   .when .time{font-family:'Roboto Mono';font-weight:600;font-size:15px;color:var(--text);white-space:nowrap}
@@ -222,6 +226,8 @@ if (location.hostname.endsWith('hatch.org')) {
   .flag{font-size:21px;line-height:1;filter:saturate(1.1)}
   .nm{font-family:'Barlow Condensed';font-weight:600;font-size:21px;letter-spacing:.02em;text-transform:uppercase;white-space:nowrap}
   .vs{font-family:'Roboto Mono';font-size:11px;color:var(--muted-2);letter-spacing:.1em}
+  .side.win .nm{color:var(--gold)}   /* knockout winner: gold name tint + star (FR2) */
+  .star{font-size:13px;line-height:1}
   .score{font-family:'Roboto Mono';font-weight:600;font-size:16px;color:var(--green-bright);padding:1px 9px;border:1px solid var(--line-strong);border-radius:7px}
   .ko-desc{font-family:'Barlow Condensed';font-weight:600;font-size:20px;letter-spacing:.02em;text-transform:uppercase;color:#C7D2E6}
   .meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px}
@@ -259,6 +265,10 @@ if (location.hostname.endsWith('hatch.org')) {
   @keyframes pulse2{50%{opacity:.3}}
   .status.up{color:var(--muted-2)}
   .status.ft{color:var(--green)}
+  /* status shown inline next to the score (FR3): separated by a middot, vertically centered with teams */
+  .status.inline{font-size:10px;align-self:center;white-space:nowrap}
+  .status.inline::before{content:"·";margin:0 7px 0 1px;color:var(--muted-2);letter-spacing:0}
+  .status.inline.live{display:inline-flex}
 
   .empty{text-align:center;padding:70px 20px;color:var(--muted)}
   .empty .big{font-family:'Barlow Condensed';font-weight:700;font-size:26px;text-transform:uppercase;color:var(--text);margin-bottom:6px}
@@ -696,21 +706,34 @@ function render(){
 
 function card(m){
   const st=m._st;
-  const detail = (st==="live" && m._detail) ? " "+m._detail : "";
-  const stLabel = st==="live"?`<span class="status live"><span class="d"></span>Live${detail}</span>`
-    : st==="ft"?`<span class="status ft">Full time</span>`
-    : `<span class="status up">Upcoming</span>`;
+  const isKo = !m.grp.startsWith("Group");   // knockout rounds can't draw -> show winner + how-won
+  const winH = isKo && st==="ft" && m._winSide==="h";
+  const winA = isKo && st==="ft" && m._winSide==="a";
+  // how the knockout was decided, folded into the inline FT status (else plain "FT")
+  let ftText = "FT";
+  if(isKo && st==="ft"){
+    if(m._penH!=null && m._penA!=null){
+      const wp = m._winSide==="a"?m._penA:m._penH, lp = m._winSide==="a"?m._penH:m._penA;
+      ftText = `PENS ${wp}–${lp}`;
+    } else if(/AET|extra/i.test(m._result||"")) ftText = "AET";
+  }
+  // compact match status shown inline beside the score (FT/live detail); empty for upcoming
+  const inlineStatus = st==="live"?`<span class="status inline live"><span class="d"></span>${m._detail||"Live"}</span>`
+    : st==="ft"?`<span class="status inline ft">${ftText}</span>`
+    : "";
   const tvClass = m.tv==="FOX"?"fox":m.tv==="FS1"?"fs1":"tbd";
   const H=m.h||m._th, A=m.a||m._ta;        // resolved knockout teams fall back to placeholder
+  const star = `<span class="star">⭐</span>`;
   let center;
   if(H){
     const liveScore = (m._scoreH!=null && m._scoreA!=null);
     const score = liveScore?`<span class="score">${m._scoreH}-${m._scoreA}</span>`
       : m.res?`<span class="score">${m.res}</span>`:`<span class="vs">vs</span>`;
     center=`<div class="teams">
-        <span class="side"><span class="flag">${FLAGS[H]||"⚽"}</span><span class="nm">${H}</span></span>
+        <span class="side${winH?' win':''}">${winH?star:''}<span class="flag">${FLAGS[H]||"⚽"}</span><span class="nm">${H}</span></span>
         ${score}
-        <span class="side"><span class="nm">${A}</span><span class="flag">${FLAGS[A]||"⚽"}</span></span>
+        <span class="side${winA?' win':''}"><span class="nm">${A}</span><span class="flag">${FLAGS[A]||"⚽"}</span>${winA?star:''}</span>
+        ${inlineStatus}
       </div>`;
   } else {
     center=`<div class="teams"><span class="ko-desc">${m.desc}</span></div>`;
@@ -734,7 +757,6 @@ function card(m){
         <span class="eschip ${esClass}">${m.es}</span>
       </div>
       <span class="stream">${stream}</span>
-      ${stLabel}
     </div>
   </article>`;
 }
@@ -913,8 +935,8 @@ async function fetchEvents(dates){
     const t=(e.status||{}).type||{};
     return {when:new Date(e.date).getTime(), state:t.state, detail:t.shortDetail||t.detail||'',
       venue:((c.venue||{}).fullName)||'',
-      hName:(home.team||{}).displayName, hScore:home.score,
-      aName:(away.team||{}).displayName, aScore:away.score};
+      hName:(home.team||{}).displayName, hScore:home.score, hWin:home.winner, hPen:home.shootoutScore,
+      aName:(away.team||{}).displayName, aScore:away.score, aWin:away.winner, aPen:away.shootoutScore};
   });
 }
 // Match an ESPN event to an M entry by identity (not by clock), so a moved kickoff still matches
@@ -944,6 +966,14 @@ function applyEvents(evs){
     } else if(hasScore){                           // group: align scores to M orientation
       if(eh===m.h){ m._scoreH=ev.hScore; m._scoreA=ev.aScore; }
       else { m._scoreH=ev.aScore; m._scoreA=ev.hScore; }
+    }
+    if(ev.state==='post'){                          // winner + how-won (knockouts), oriented to M's h/a
+      const homeIsH = !m.h ? true : (eh===m.h);     // knockout _th/_ta come from ESPN home/away directly
+      if(ev.hWin===true||ev.aWin===true) m._winSide = ((ev.hWin===true)===homeIsH) ? 'h' : 'a';
+      if(ev.hPen!=null && ev.aPen!=null){
+        if(homeIsH){ m._penH=ev.hPen; m._penA=ev.aPen; } else { m._penH=ev.aPen; m._penA=ev.hPen; }
+      }
+      m._result = ev.detail||'';                    // e.g. "FT","AET","FT-Pens" -> detect extra time
     }
     [eh,ea].forEach(n=>{ if(n&&!isPlaceholder(n)&&!KNOWN.has(n)) console.warn('Unmapped ESPN team name:',n); });
   });
